@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PaperTrade MVP - Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    pre { background: #f4f4f4; padding: 10px; }
+    input, select { padding: 6px; margin: 4px 0; }
+  </style>
+</head>
+<body>
+<h1>PaperTrade MVP - Demo</h1>
+<div>
+  <strong>Account:</strong> <span id="cash">--</span>
+</div>
+<div>
+  <h2>Live Tick</h2>
+  <pre id="tick">connecting...</pre>
+</div>
+<div>
+  <h2>Place Order</h2>
+  <form id="orderForm">
+    <label>Instrument: <input name="instrument" value="NIFTY"></label><br>
+    <label>Side: <select name="side"><option>BUY</option><option>SELL</option></select></label><br>
+    <label>Qty: <input name="qty" value="1"></label><br>
+    <label>Type: <select name="order_type"><option>MARKET</option><option>LIMIT</option></select></label><br>
+    <label>Price (limit): <input name="price" value=""></label><br>
+    <button type="submit">Place Order</button>
+  </form>
+  <pre id="orderResp"></pre>
+</div>
+
+<script>
+async function fetchAccount(){
+  try{
+    const r = await fetch('http://127.0.0.1:8000/api/account');
+    const data = await r.json();
+    document.getElementById('cash').innerText = data.cash;
+  }catch(e){ console.error(e); }
+}
+fetchAccount();
+const ws = new WebSocket('ws://127.0.0.1:8000/ws/quotes');
+ws.onopen = ()=>{ console.log('ws open'); }
+ws.onmessage = e => {
+  document.getElementById('tick').innerText = e.data;
+}
+document.getElementById('orderForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const form = ev.target;
+  const body = {
+    instrument: form.instrument.value,
+    side: form.side.value,
+    qty: parseInt(form.qty.value),
+    order_type: form.order_type.value,
+    price: form.price.value ? parseFloat(form.price.value) : null
+  };
+  const r = await fetch('http://127.0.0.1:8000/api/orders', {
+  method: 'POST',
+  headers: {'content-type': 'application/json'},
+  body: JSON.stringify(body)
+});
+  const d = await r.json();
+  document.getElementById('orderResp').innerText = JSON.stringify(d,null,2);
+};
+</script>
+</body>
+</html>
